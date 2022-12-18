@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 val toolkit by lazy {
@@ -22,18 +23,21 @@ kotlin {
     sourceSets {
         val jvmMain by getting {
             dependencies {
-//                ktorClientJVM(toolkit)
+                ktorClientJVM(toolkit)
+
             }
         }
         val androidMain by getting {
             dependencies {
-//                ktorClientAndroid(toolkit)
+                ktorClientAndroid(toolkit)
             }
         }
 
         val commonMain by getting {
             dependencies {
-//                ktorClient(toolkit)
+                ktorClient(toolkit)
+                kotlinX(toolkit)
+                mallumo(toolkit)
             }
         }
     }

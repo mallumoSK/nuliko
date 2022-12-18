@@ -8,6 +8,7 @@ import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import tk.mallumo.log.*
+import tk.mallumo.nuliko.*
 
 class RepoDirect : ImplRepo() {
 
@@ -17,59 +18,37 @@ class RepoDirect : ImplRepo() {
 
     fun run() {
         scope.launch {
-            while (isActive) {
-                val registrationMessage = Message.Registration.create(Repository.appId, Repository.deviceId)
-                clientSocket(Repository.connectorId).use {
-                    it.webSocket(
-                        method = HttpMethod.Get,
-                        host = Constants.server.host,
-                        port = Constants.server.port,
-                        path = "/${Constants.Path.WS_REGISTRATION}"
-                    ) {
-                        send(Frame.Binary(true, registrationMessage.toProto()))
-
-                        for (message in incoming) {
-                            when (message) {
-                                is Frame.Binary -> handleMessage(message)
-                                else -> println("unknown message:${message::class.simpleName}")
-                            }
-                        }
-                    }
-                }
-            }
-
+            runConnector(Constants.Rpi.appId, Constants.Rpi.deviceId, ::handleMessage)
         }
     }
 
-    private suspend fun handleMessage(frame: Frame.Binary) {
-        val data = frame.readBytes()
-        try {
-            val msg = RCMessage.decode(data)!!
-            when (val content = msg.content) {
-                is RCMessage.Content.StreamLiveStart -> Repository.onvif.streamLiveStart(msg.from, content.durationMs)
-                is RCMessage.Content.StreamLiveStop -> Repository.onvif.streamLiveStop(msg.from)
+    private suspend fun handleMessage(msg: RCMessage) {
+        when (val content = msg.content) {
+            is RCMessage.Content.StreamLiveStart -> Repository.onvif.streamLiveStart(
+                from = msg.from,
+                durationMs = content.durationMs
+            )
+            is RCMessage.Content.StreamLiveStop -> Repository.onvif.streamLiveStop(msg.from)
 
-                is RCMessage.Content.StreamHistoryStart ->  Repository.onvif.streamHistoryStart(msg.from,content.time, content.durationMs)
-                is RCMessage.Content.StreamHistoryStop -> Repository.onvif.streamHistoryStop(msg.from)
+            is RCMessage.Content.StreamHistoryStart -> Repository.onvif.streamHistoryStart(
+                target = msg.from,
+                time = content.time,
+                durationMs = content.durationMs
+            )
 
-                is RCMessage.Content.StreamHistoryAsk -> {
-                    postContent(
-                        target = msg.from,
-                        content = RCMessage.Content.StreamHistoryAnswer(
-                            Repository.diskManager.getHistoryStructure()
-                        )
+            is RCMessage.Content.StreamHistoryStop -> Repository.onvif.streamHistoryStop(msg.from)
+
+            is RCMessage.Content.StreamHistoryAsk -> {
+                postContent(
+                    target = msg.from,
+                    content = RCMessage.Content.StreamHistoryAnswer(
+                        items = Repository.diskManager.getHistoryStructure()
                     )
-                }
+                )
+            }
 
-                is RCMessage.Content.StreamData,
-                is RCMessage.Content.StreamHistoryAnswer -> Unit
-            }
-        } catch (e: Exception) {
-            try {
-                logWARN(Message.fromProto(frame.readBytes()))
-            } catch (e: Throwable) {
-                e.printStackTrace()
-            }
+            is RCMessage.Content.StreamData,
+            is RCMessage.Content.StreamHistoryAnswer -> Unit
         }
     }
 
@@ -85,8 +64,8 @@ class RepoDirect : ImplRepo() {
 
     private suspend fun postContent(target: String, content: RCMessage.Content) {
         val msg = RCMessage(
-            id = RCMessage.genID(Repository.connectorId),
-            from = Repository.connectorId,
+            id = RCMessage.genID(Constants.Rpi.connectorId()),
+            from = Constants.Rpi.connectorId(),
             to = target,
             content = content
         )
@@ -96,8 +75,8 @@ class RepoDirect : ImplRepo() {
 
     private suspend fun postMessageFrame(msg: RCMessage) {
         val (targetApp, targetDev) = msg.to.split("_")
-        val respond = clientDirect(Repository.connectorId).use {
-            it.post(buildServerProtoMsgUrl(targetApp, targetDev)) {
+        val respond = Constants.clientDirect(msg.from).use {
+            it.post(Constants.buildServerProtoMsgUrl(targetApp, targetDev)) {
                 setBody(msg.toProtoBuff())
             }
         }

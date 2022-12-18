@@ -3,17 +3,17 @@ package tk.mallumo
 import java.io.File
 
 /*
-
---backup-dir "/tmp/cam0" \
+ java -jar ./Desktop/nuliko-rpi-1.0.0-all.jar \
+--backup-dir "/tmp/backup" \
 --backup-days 1 \
---cam-ip "192.168.1.14:8899" \
+--cam-ip "192.168.1.16:8899" \
 --cam-auth-name "cam1" \
 --cam-auth-pass "Oscadnica993"
 
  */
 object GlobalParams {
 
-    var camIp = "192.168.1.14:8899"
+    var camIp = "192.168.1.16:8899"
         private set
 
     var camAuthName = "cam1"
@@ -38,8 +38,6 @@ object GlobalParams {
         camIp = args.getArgsParamString("--cam-ip", camIp)
         camAuthName = args.getArgsParamString("--cam-auth-name", camAuthName)
         camAuthPass = args.getArgsParamString("--cam-auth-pass", camAuthPass)
-
-        if(!backupDir.exists()) backupDir.mkdirs()
     }
 
 

@@ -10,6 +10,15 @@ https://github.com/03/ONVIF-Java
 
 */
 
+/*
+ java -jar ./nuliko-rpi-1.0.0-all.jar \
+--backup-dir "/tmp/backup" \
+--backup-days 1 \
+--cam-ip "192.168.1.16:8899" \
+--cam-auth-name "cam1" \
+--cam-auth-pass "Oscadnica993"
+
+ */
 @ExperimentalTime
 fun main(args: Array<String>) {
 

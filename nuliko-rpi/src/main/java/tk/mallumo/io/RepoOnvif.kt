@@ -1,5 +1,6 @@
 package tk.mallumo.io
 
+import api.rc.extra.*
 import be.teletask.onvif.*
 import be.teletask.onvif.listeners.*
 import be.teletask.onvif.models.*
@@ -9,6 +10,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import tk.mallumo.*
+import tk.mallumo.log.*
 import tk.mallumo.utils.*
 import java.util.Calendar
 import kotlin.time.Duration.Companion.minutes
@@ -51,7 +53,14 @@ class RepoOnvif : ImplRepo() {
             while (isActive) {
                 kotlin.runCatching {
                     clientRestCam().use { client ->
-                        val response = client.get(onvifManager.getSnapshotUrl(profile!!))
+                        val url = onvifManager.getSnapshotUrl(profile!!)
+                        val realUrl = url.split(":")
+                            .toMutableList()
+                            .let {
+                                it[1] = "//${GlobalParams.camIp.split(":")[0]}"
+                                it
+                            }.joinToString(":")
+                        val response = client.get(realUrl)
                         response.takeIf { it.status.isSuccess() }
                             ?.body<ByteArray>()
                             ?.also { bytes ->

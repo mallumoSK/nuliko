@@ -31,7 +31,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "nuliko"
-include("nuliko-rpi")
+include(":nuliko-rpi")
 
 include(":nuliko-android")
-include("nuliko-shared")
+include(":nuliko-shared")

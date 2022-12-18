@@ -4,3 +4,5 @@
 /buildSrc/build/
 /build/
 /nuliko-rpi/build/
+/nuliko-shared/build/*
+/nuliko-shared/build/
