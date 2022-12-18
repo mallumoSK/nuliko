@@ -1,0 +1,6 @@
+/.gradle/
+/.idea/
+/buildSrc/.gradle/
+/buildSrc/build/
+/build/
+/nuliko-rpi/build/
