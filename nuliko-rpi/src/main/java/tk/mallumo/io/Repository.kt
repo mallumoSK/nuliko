@@ -42,6 +42,10 @@ object Repository : Closeable {
         RepoDirect()
     }
 
+    val gpio by lazy {
+        RepoGpio()
+    }
+
     override fun close() {
         diskManager.runCatching { close() }
         onvif.runCatching { close() }

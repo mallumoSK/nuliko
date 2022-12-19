@@ -72,6 +72,10 @@ val protoSerializer = ProtoBuf {
                 RCMessage.Content.StreamData::class,
                 RCMessage.Content.StreamData.serializer()
             )
+            subclass(
+                RCMessage.Content.Gpio::class,
+                RCMessage.Content.Gpio.serializer()
+            )
         }
     }
 }

@@ -28,6 +28,7 @@ class RepoDirect : ImplRepo() {
                 from = msg.from,
                 durationMs = content.durationMs
             )
+
             is RCMessage.Content.StreamLiveStop -> Repository.onvif.streamLiveStop(msg.from)
 
             is RCMessage.Content.StreamHistoryStart -> Repository.onvif.streamHistoryStart(
@@ -49,6 +50,10 @@ class RepoDirect : ImplRepo() {
 
             is RCMessage.Content.StreamData,
             is RCMessage.Content.StreamHistoryAnswer -> Unit
+
+            is RCMessage.Content.Gpio -> {
+                Repository.gpio.pinSetup(content.id, content.state, content.durationMs)
+            }
         }
     }
 

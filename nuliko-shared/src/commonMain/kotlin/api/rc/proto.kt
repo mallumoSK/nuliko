@@ -149,6 +149,19 @@ data class RCMessage(
         ) : Content {
             companion object
         }
+
+        @Serializable
+        class Gpio(
+            @ProtoNumber(5)
+            val id: Int,
+            @ProtoNumber(6)
+            val state: Boolean,
+            @ProtoNumber(7)
+            val durationMs: Int,
+        ) : Content {
+            companion object
+        }
+
         @Serializable
         class StreamLiveStart(
             @ProtoNumber(5)
