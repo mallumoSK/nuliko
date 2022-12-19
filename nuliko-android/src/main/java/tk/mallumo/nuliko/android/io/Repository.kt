@@ -1,9 +1,9 @@
 package tk.mallumo.nuliko.android.io
 
 import kotlinx.coroutines.*
-import tk.mallumo.log.logERROR
-import tk.mallumo.nuliko.android.app
-import tk.mallumo.nuliko.android.system.deviceID
+import tk.mallumo.log.*
+import tk.mallumo.nuliko.android.*
+import tk.mallumo.nuliko.android.system.*
 
 object Repository {
 
@@ -22,4 +22,7 @@ object Repository {
         RepoDirect(baseScope + CoroutineName("connector"))
     }
 
+    val gpio by lazy {
+        RepoGpio(baseScope + CoroutineName("gpio"))
+    }
 }
