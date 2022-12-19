@@ -46,7 +46,7 @@ class PlayerVM : NavigationViewModel() {
     @Composable
     fun collectUI() = Repository.player.collect()
 
-    var rotation by mutableStateOf(0F)
+    var rotation by mutableStateOf(360F)
         private set
 
     sealed interface Action {
@@ -75,8 +75,8 @@ class PlayerVM : NavigationViewModel() {
     }
 
     private fun rotate() {
-        rotation = if (rotation + 90F > 360F) 0F
-        else rotation + 90
+        rotation = if (rotation - 90F < 0F) 360F
+        else rotation - 90
     }
 
     private fun stop() {

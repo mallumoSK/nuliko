@@ -99,7 +99,6 @@ fun ControllerUI() {
                 )
             }
             Space(16.dp)
-
         }
     }
 
@@ -110,7 +109,6 @@ fun ControllerUI() {
 fun ControllerScope.GpioCard(item: GpioHW, modifier: Modifier) {
     val activeUntil = vm.uiState[item.pinId] ?: 0
 
-    logERROR("${activeUntil} -- ${item.pinId}")
     val background by animateColorAsState(
         targetValue =
         if (activeUntil > SystemClock.elapsedRealtime()) MaterialTheme.colors.secondary

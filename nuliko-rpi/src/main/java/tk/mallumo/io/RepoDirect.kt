@@ -80,11 +80,10 @@ class RepoDirect : ImplRepo() {
 
     private suspend fun postMessageFrame(msg: RCMessage) {
         val (targetApp, targetDev) = msg.to.split("_")
-        val respond = Constants.clientDirect(msg.from).use {
+        Constants.clientDirect(msg.from).use {
             it.post(Constants.buildServerProtoMsgUrl(targetApp, targetDev)) {
                 setBody(msg.toProtoBuff())
             }
         }
-        logINFO(respond.status)
     }
 }
