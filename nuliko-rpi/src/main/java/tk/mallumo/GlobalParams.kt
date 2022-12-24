@@ -13,9 +13,6 @@ import java.io.File
  */
 object GlobalParams {
 
-    var camIp = "192.168.1.16:8899"
-        private set
-
     var camAuthName = "cam1"
         private set
 
@@ -35,7 +32,6 @@ object GlobalParams {
         }
         backupDir = args.getArgsParamFile("--backup-dir", backupDir)
         backupDays = args.getArgsParamInt("--backup-days", 1)
-        camIp = args.getArgsParamString("--cam-ip", camIp)
         camAuthName = args.getArgsParamString("--cam-auth-name", camAuthName)
         camAuthPass = args.getArgsParamString("--cam-auth-pass", camAuthPass)
     }

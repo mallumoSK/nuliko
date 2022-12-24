@@ -12,7 +12,9 @@ import kotlinx.coroutines.*
 import tk.mallumo.*
 import tk.mallumo.log.*
 import tk.mallumo.utils.*
-import java.util.Calendar
+import kotlin.coroutines.*
+import kotlin.system.*
+import kotlin.time.*
 import kotlin.time.Duration.Companion.minutes
 
 
@@ -20,44 +22,34 @@ class RepoOnvif : ImplRepo() {
 
     private lateinit var job: Job
 
-    var profile: OnvifMediaProfile? = null
+    private var profile: OnvifMediaProfile? = null
 
     private val streamClients = mutableListOf<Pair<String, Long>>()
 
     @OptIn(DelicateCoroutinesApi::class)
     override val scope = CoroutineScope(newFixedThreadPoolContext(2, "RepoOnvif")) + Dispatchers.IO
 
-    init {
-        println("profile init start")
-        scope.launch {
-            do {
-                runCatching {
-                    profile = onvifManager.getProfiles()
-                        .let { it.getOrNull(1) ?: it[0] }
-                }.onFailure {
-                    it.printStackTrace()
-                    delay(1.minutes)
-                }
-            } while (profile == null && isActive)
-            println("profile init OK")
-        }
-    }
-
     fun run() {
         job = scope.launch {
             println("main loop start")
-            do {
-                delay(5.second)
-            } while (profile == null)
-            println("main loop ready")
+
             while (isActive) {
+
+                while (isActive && profile == null) {
+                    profile = findOnvifProfile()
+                    println("main loop ready")
+                }
+
+                if (!isActive) break
+
                 kotlin.runCatching {
                     clientRestCam().use { client ->
                         val url = onvifManager.getSnapshotUrl(profile!!)
+                        val ip = camDev!!.hostName.split("//")[1].split(":")[0]
                         val realUrl = url.split(":")
                             .toMutableList()
                             .let {
-                                it[1] = "//${GlobalParams.camIp.split(":")[0]}"
+                                it[1] = "//$ip"
                                 it
                             }.joinToString(":")
                         val response = client.get(realUrl)
@@ -78,10 +70,30 @@ class RepoOnvif : ImplRepo() {
                     }
                 }.onFailure {
                     it.printStackTrace()
-                    delay(10.second)
+                    profile = null
                 }
             }
         }
+    }
+
+    private suspend fun findOnvifProfile(): OnvifMediaProfile? {
+        camDev = null
+
+        while (camDev == null) {
+            for (ip in 2..255) {
+                val device = OnvifDevice(
+                    /* hostName = */ "192.168.1.$ip:8899",
+                    /* username = */ GlobalParams.camAuthName,
+                    /* password = */ GlobalParams.camAuthPass
+                )
+                val profile = device.profile()
+                if(profile != null){
+                    camDev = device
+                    return profile
+                }
+            }
+        }
+        return null
     }
 
     override fun close() {
@@ -142,19 +154,33 @@ private val respondListener = object : OnvifResponseListener {
     }
 }
 
-private val camDev by lazy {
-    OnvifDevice(
-        /* hostName = */ GlobalParams.camIp,
-        /* username = */ GlobalParams.camAuthName,
-        /* password = */ GlobalParams.camAuthPass
-    )
-}
+private var camDev: OnvifDevice? = null
 
 class OnvifException(code: Int, msg: String?) : Exception("$code : $msg")
 
 
 @Throws(OnvifException::class)
-suspend fun OnvifManager.getProfiles() =
+private suspend fun OnvifDevice.profile():OnvifMediaProfile? =
+    suspendCancellableCoroutine { continuation ->
+        var manager: OnvifManager? = null
+        val callback = object : OnvifResponseListener {
+            override fun onResponse(onvifDevice: OnvifDevice?, response: OnvifResponse<*>?) =Unit
+
+            override fun onError(onvifDevice: OnvifDevice?, errorCode: Int, errorMessage: String?) {
+                manager?.destroy()
+                continuation.resume(null)
+            }
+
+        }
+        manager = OnvifManager(callback)
+        manager.getMediaProfiles(this) { _ , profiles:List<OnvifMediaProfile?>? ->
+            manager.destroy()
+            continuation.resume(profiles?.firstOrNull())
+        }
+    }
+
+@Throws(OnvifException::class)
+private suspend fun OnvifManager.getProfiles() =
     suspendCancellableCoroutine<List<OnvifMediaProfile>> { continuation ->
 
         val errCallback = { errorCode: Int, errorMessage: String? ->
@@ -170,7 +196,7 @@ suspend fun OnvifManager.getProfiles() =
     }
 
 @Throws(OnvifException::class)
-suspend fun OnvifManager.getSnapshotUrl(profile: OnvifMediaProfile) =
+private suspend fun OnvifManager.getSnapshotUrl(profile: OnvifMediaProfile) =
     suspendCancellableCoroutine<String> { continuation ->
 
         val errCallback = { errorCode: Int, errorMessage: String? ->
