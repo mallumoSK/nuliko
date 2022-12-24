@@ -12,11 +12,13 @@ import androidx.compose.ui.layout.*
 import androidx.compose.ui.unit.*
 import compose.assets.*
 import compose.assets.svg.*
+import kotlinx.coroutines.*
 import tk.mallumo.compose.navigation.*
 import tk.mallumo.compose.navigation.viewmodel.*
 import tk.mallumo.log.*
 import tk.mallumo.nuliko.*
 import tk.mallumo.nuliko.android.io.*
+import tk.mallumo.utils.*
 
 abstract class PlayerScope {
     abstract val vm: PlayerVM
@@ -137,7 +139,9 @@ fun PlayerScope.ErrorState(message: String) {
 
 @Composable
 fun PlayerScope.LoadingState() {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .clickable { action(PlayerVM.Action.Stop) }) {
         CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
     }
 }
@@ -166,5 +170,10 @@ fun PlayerScope.ResultState(nnvl: ImageBitmap) {
         ) {
             Icon(imageVector = Svg.Rotate, contentDescription = "Rotate")
         }
+    }
+
+    LaunchedEffect(Unit ){
+        delay(15.minute)
+        if(isActive) action(PlayerVM.Action.Stop)
     }
 }
