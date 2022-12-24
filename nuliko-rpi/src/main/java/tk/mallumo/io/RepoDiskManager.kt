@@ -24,6 +24,8 @@ class RepoDiskManager : ImplRepo() {
     fun storeImage(data: ByteArray): String {
         val cal = Calendar.getInstance()
         val timeStamp = cal.fileDtName
+        if(GlobalParams.backupDays<1) return timeStamp
+
         scope.launch {
             File(GlobalParams.backupDir, cal.dirDtName).apply {
                 if (!exists()) mkdirs()
