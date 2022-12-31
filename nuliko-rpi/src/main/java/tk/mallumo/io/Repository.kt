@@ -65,7 +65,7 @@ abstract class ImplRepo : Closeable {
     protected open val scope =
         CoroutineScope(newSingleThreadContext("repo-${scopeGen.getAndIncrement()}")) + Dispatchers.IO
 
-    protected fun clientRestCam() = HttpClient(CIO) {
+     fun clientRestCam() = HttpClient(CIO) {
         engine {
             https {
                 trustManager = object : X509TrustManager {
@@ -82,6 +82,14 @@ abstract class ImplRepo : Closeable {
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 30.second
+        }
+        install(Auth){
+            digest {
+                realm = "IPC"
+                credentials {
+                    DigestAuthCredentials(username = "admin", password = "Oscadnica993")
+                }
+            }
         }
     }
 

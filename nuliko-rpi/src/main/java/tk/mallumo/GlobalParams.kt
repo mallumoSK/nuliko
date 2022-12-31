@@ -13,16 +13,16 @@ import java.io.File
  */
 object GlobalParams {
 
-    var camAuthName = "cam1"
-        private set
-
     var camAuthPass = "Oscadnica993"
         private set
 
     var backupDays = 1
         private set
 
-    var backupDir = File("/tmp/backup")
+    var storageConnected = false
+        private set
+
+    var backupDir = File("/tmp/___/backup")
         private set
 
     fun init(args: Array<String>) {
@@ -30,10 +30,17 @@ object GlobalParams {
         args.toList().chunked(2).forEach {
             println("${it.getOrNull(0)} <> ${it.getOrNull(1)}")
         }
+        if (isDebug && !backupDir.exists()) backupDir.mkdirs()
+
         backupDir = args.getArgsParamFile("--backup-dir", backupDir)
         backupDays = args.getArgsParamInt("--backup-days", 1)
-        camAuthName = args.getArgsParamString("--cam-auth-name", camAuthName)
         camAuthPass = args.getArgsParamString("--cam-auth-pass", camAuthPass)
+
+        if (!isDebug) connectExternalStorage()
+    }
+
+    private fun connectExternalStorage() {
+//        TODO("Not yet implemented")
     }
 
 

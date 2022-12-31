@@ -20,8 +20,7 @@ object Constants {
 
     object Rpi{
         const val appId = "nRPI-RC"
-        const val deviceId = "RPI4x0"
-        fun connectorId() = createConnectorID(appId, deviceId)
+        fun connectorId(deviceId:String) = createConnectorID(appId, deviceId)
     }
 
     object Android{

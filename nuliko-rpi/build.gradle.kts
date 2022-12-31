@@ -24,8 +24,7 @@ dependencies {
     implementation("com.github.03:onvif:1.0.9")
     implementation("com.burgstaller:okhttp-digest:2.5")
     implementation(project(":nuliko-shared"))
-
-
+    implementation(files("/opt/GitHub/me/nuliko/nuliko-rpi/src/libs/opencv-470.jar"))
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>() {

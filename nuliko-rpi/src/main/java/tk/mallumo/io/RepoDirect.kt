@@ -7,18 +7,26 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import tk.mallumo.isDebug
 import tk.mallumo.log.*
 import tk.mallumo.nuliko.*
 
 class RepoDirect : ImplRepo() {
 
+    companion object {
+        val deviceId: String by lazy {
+            if (isDebug) "RPI4x0"
+            else "RPI4xDEBUG"
+        }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    override val scope = CoroutineScope(newFixedThreadPoolContext(2, "RepoDirect")) + Dispatchers.IO
+
+    }
+
+    override val scope = CoroutineScope(CoroutineName("RepoDirect")) + Dispatchers.IO
 
     fun run() {
         scope.launch {
-            runConnector(Constants.Rpi.appId, Constants.Rpi.deviceId, ::handleMessage)
+            runConnector(Constants.Rpi.appId, deviceId, ::handleMessage)
         }
     }
 
@@ -69,8 +77,8 @@ class RepoDirect : ImplRepo() {
 
     private suspend fun postContent(target: String, content: RCMessage.Content) {
         val msg = RCMessage(
-            id = RCMessage.genID(Constants.Rpi.connectorId()),
-            from = Constants.Rpi.connectorId(),
+            id = RCMessage.genID(Constants.Rpi.connectorId(deviceId)),
+            from = Constants.Rpi.connectorId(deviceId),
             to = target,
             content = content
         )

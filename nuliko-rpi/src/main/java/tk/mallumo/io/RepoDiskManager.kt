@@ -1,14 +1,21 @@
 package tk.mallumo.io
 
 import api.rc.*
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.opencv.core.Mat
+import org.opencv.core.MatOfByte
+import org.opencv.imgcodecs.Imgcodecs
 import tk.mallumo.GlobalParams
+import tk.mallumo.GlobalParams.storageConnected
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
 
-fun File.timeStampFromName():Int =  name.split("_").firstOrNull()?.toIntOrNull()?:0
+fun File.timeStampFromName(): Int = name.split("_").firstOrNull()?.toIntOrNull() ?: 0
 
 private val dirFormat = SimpleDateFormat("yyyyMMdd")
 private val fileFormat = SimpleDateFormat("HHmmssSSS")
@@ -19,17 +26,24 @@ val Calendar.dirDtName: String
 val Calendar.fileDtName: String
     get() = fileFormat.format(time)
 
+
 class RepoDiskManager : ImplRepo() {
 
+    override val scope: CoroutineScope = CoroutineScope(CoroutineName("DiskManager") + Dispatchers.IO)
+
     fun storeImage(data: ByteArray): String {
+
         val cal = Calendar.getInstance()
         val timeStamp = cal.fileDtName
-        if(GlobalParams.backupDays<1) return timeStamp
+
+        if (GlobalParams.backupDays < 1) return timeStamp
+        if (!storageConnected) return timeStamp
+        if (cal[Calendar.HOUR_OF_DAY] in 8..18) return timeStamp
 
         scope.launch {
             File(GlobalParams.backupDir, cal.dirDtName).apply {
                 if (!exists()) mkdirs()
-                File(this, "${timeStamp}.jpg").writeBytes(data)
+                File(this, "${timeStamp}.webp").writeBytes(data)
             }
             deleteOldDir()
         }
@@ -94,12 +108,14 @@ class RepoDiskManager : ImplRepo() {
         }
 
         return buildList {
-            var items:List<File>
+            var items: List<File>
             do {
-                items = getFiles(start,end)
+                items = getFiles(start, end)
                 addAll(items)
                 start.add(Calendar.DAY_OF_MONTH, 1)
-            }while (items.isNotEmpty())
+            } while (items.isNotEmpty())
         }
     }
+
+
 }

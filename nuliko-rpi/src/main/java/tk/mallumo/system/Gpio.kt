@@ -1,6 +1,6 @@
 package tk.mallumo.system
 
-import kotlinx.coroutines.runBlocking
+import tk.mallumo.log.logERROR
 import tk.mallumo.utils.*
 import java.io.Closeable
 
@@ -31,6 +31,8 @@ class Gpio private constructor(
     }
 
     fun low() {
+        logERROR("GPIO $port OFF")
+
         shellSH {
             if (!isConnected()) throw IllegalStateException("not opened")
             run("echo \"${State.LOW}\" > /sys/class/gpio/$port/value")
@@ -39,6 +41,7 @@ class Gpio private constructor(
     }
 
     fun high() {
+        logERROR("GPIO $port ON")
         shellSH {
             if (!isConnected()) throw IllegalStateException("not opened")
             run("echo \"${State.HIGH}\" > /sys/class/gpio/$port/value")
