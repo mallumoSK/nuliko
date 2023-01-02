@@ -1,7 +1,7 @@
 package tk.mallumo.io
 
 import kotlinx.coroutines.*
-import tk.mallumo.system.*
+import tk.mallumo.system.Gpio
 
 class RepoGpio : ImplRepo() {
     private val gpioMap = mutableMapOf<Int, Gpio>()
@@ -26,7 +26,7 @@ class RepoGpio : ImplRepo() {
         else pinOFF(id)
     }
 
-  private  fun pinON(id: Int, durationMs: Int) = getPin(id).apply {
+    private fun pinON(id: Int, durationMs: Int) = getPin(id).apply {
         jobMap[address]?.cancel()
         jobMap[address] = scope.launch {
             high()
@@ -35,7 +35,7 @@ class RepoGpio : ImplRepo() {
         }
     }
 
-    private    fun pinOFF(id: Int) = getPin(id).apply {
+    private fun pinOFF(id: Int) = getPin(id).apply {
         jobMap[address]?.cancel()
         low()
     }

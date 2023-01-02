@@ -5,7 +5,8 @@ import java.net.NetworkInterface
 
 val NetworkInterface.ip: String?
     get() = inetAddresses.asSequence()
+        .filterNot { it.isLoopbackAddress }
+//        .filterNot { it.na }
         .filterIsInstance<Inet4Address>()
         .firstOrNull()
         ?.hostAddress
-        ?.takeIf { !it.startsWith("127") }

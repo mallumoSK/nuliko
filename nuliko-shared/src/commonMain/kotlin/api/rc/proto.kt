@@ -165,44 +165,54 @@ data class RCMessage(
         @Serializable
         class StreamLiveStart(
             @ProtoNumber(5)
+            val camId: Int,
+            @ProtoNumber(6)
             val durationMs: Int
         ) : Content {
             companion object
         }
 
         @Serializable
-        class StreamLiveStop : Content {
+        class StreamLiveStop(
+            @ProtoNumber(5)
+            val camId: Int
+        ) : Content {
             companion object
         }
 
         @Serializable
-        class StreamHistoryAsk: Content {
+        class StreamHistoryAsk(
+            @ProtoNumber(5)
+            val camId: Int
+        ) : Content {
             companion object
         }
 
         @Serializable
         class StreamHistoryAnswer(
             @ProtoNumber(5)
-            val items:List<Item>
+            val items: List<Item>
         ) : Content {
             companion object
 
             @Serializable
             class Item(
                 @ProtoNumber(6)
-                var day:String,
+                var day: String,
                 @ProtoNumber(7)
-                var first:String,
+                var first: String,
                 @ProtoNumber(8)
-                var last:String
+                var last: String
             )
         }
 
         @Serializable
         class StreamHistoryStart(
             @ProtoNumber(5)
-            val time: String,
+            val camId: Int,
             @ProtoNumber(6)
+            val time: String,
+            @ProtoNumber(7)
             val durationMs: Long
         ) : Content {
             companion object

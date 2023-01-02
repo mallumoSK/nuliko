@@ -1,49 +1,44 @@
 package tk.mallumo.io
 
-import api.rc.extra.*
-import be.teletask.onvif.*
-import be.teletask.onvif.listeners.*
-import be.teletask.onvif.models.*
-import be.teletask.onvif.responses.*
+import be.teletask.onvif.models.OnvifDevice
+import be.teletask.onvif.models.OnvifMediaProfile
 import io.ktor.client.call.*
 import io.ktor.client.request.*
-import io.ktor.http.*
 import kotlinx.coroutines.*
-import okhttp3.internal.notifyAll
 import org.opencv.core.Mat
 import org.opencv.videoio.VideoCapture
-import tk.mallumo.*
+import tk.mallumo.GlobalParams
 import tk.mallumo.ext.*
-import tk.mallumo.log.*
-import tk.mallumo.utils.*
-import java.net.Inet4Address
-import java.net.InetAddress
+import tk.mallumo.log.logINFO
+import tk.mallumo.utils.second
 import java.net.NetworkInterface
-import kotlin.coroutines.*
-import kotlin.system.*
-import kotlin.time.*
+import kotlin.collections.set
 
 
 class RepoOnvif : ImplRepo() {
 
-    private lateinit var jobCam1: Job
-    private lateinit var jobCam2: Job
+    private var jobCam1: Job? = null
+    private var jobCam2: Job? = null
 
-    private val streamClients = mutableListOf<Pair<String, Long>>()
+    private val streamClients = mutableMapOf<Int, MutableList<Pair<String, Long>>>()
+    private val historyJobs = mutableMapOf<String, Job>()
 
     override val scope = CoroutineScope(CoroutineName("RepoOnvif")) + Dispatchers.IO
 
     fun runCam2() {
+        jobCam2?.runCatching {
+            cancel()
+        }
         jobCam2 = scope.launch {
             println("main loop start")
+            var dev: OnvifDevice? = null
+            var prof: OnvifMediaProfile? = null
 
-
-            var snapshotUrl = ""
             while (isActive) {
-
-                while (isActive && snapshotUrl.isEmpty()) {
+                while (isActive && dev == null && prof == null) {
                     findOnvifProfile("admin", 3702).also {
-                        snapshotUrl = it.first.snapshotUrl(it.second) ?: ""
+                        dev = it.first
+                        prof = it.second
                     }
                 }
 
@@ -51,37 +46,43 @@ class RepoOnvif : ImplRepo() {
 
                 var errCounter = 0
                 kotlin.runCatching {
-                    while (isActive && errCounter < 10) {
+                    while (isActive && errCounter < 10 && dev != null && prof != null) {
+                        val snapshotUrl = dev!!.snapshotUrl(prof!!) ?: ""
                         runCatching {
                             val bytes = clientRestCam().use {
                                 it.get(snapshotUrl).body<ByteArray>()
                             }
                             val data = bytes.toMat().toBytesOfWebP()
 
-                            val timestamp = Repository.diskManager.storeImage(data)
+                            val timestamp = Repository.diskManager.storeImage(2, data)
                             val now = System.currentTimeMillis()
 
-                            streamClients
-                                .filter { it.second > now }
-                                .forEach {
-                                    Repository.direct.postVideoFrame(it.first, timestamp.toInt(), data)
+                            streamClients[2]
+                                ?.filter { it.second > now }
+                                ?.forEach {
+                                    runCatching {
+                                        Repository.direct.postVideoFrame(it.first, timestamp.toInt(), data)
+                                    }.onFailure {
+                                        it.printStackTrace()
+                                    }
                                 }
                         }.onFailure {
                             errCounter += 1
                         }.onSuccess {
                             errCounter = 0
                         }
-
                     }
                 }.onFailure {
                     it.printStackTrace()
                 }
-                snapshotUrl = ""
+                dev = null
+                prof = null
             }
         }
     }
 
     fun runCam1() {
+        jobCam1?.runCatching { cancel() }
         jobCam1 = scope.launch {
             println("main loop start")
 
@@ -110,11 +111,11 @@ class RepoOnvif : ImplRepo() {
                         } else {
                             val bytes = imgMat.toBytesOfWebP()
 
-                            val timestamp = Repository.diskManager.storeImage(bytes)
+                            val timestamp = Repository.diskManager.storeImage(1, bytes)
                             val now = System.currentTimeMillis()
-
-                            streamClients.filter { it.second > now }
-                                .forEach {
+                            streamClients[1]
+                                ?.filter { it.second > now }
+                                ?.forEach {
                                     Repository.direct.postVideoFrame(it.first, timestamp.toInt(), bytes)
                                 }
                         }
@@ -139,10 +140,11 @@ class RepoOnvif : ImplRepo() {
 
         while (true) {
             var ipParts: List<String>? = null
-            while (ipParts == null){
+            while (ipParts == null) {
                 ipParts = withContext(Dispatchers.IO) {
                     NetworkInterface.getNetworkInterfaces()
                         .asSequence()
+                        .filterNot { it.name.startsWith("tun") }
                         .mapNotNull { it.ip }
                         .firstOrNull()
                         ?.split(".")
@@ -151,7 +153,7 @@ class RepoOnvif : ImplRepo() {
             }
 
             for (ipSuffix in range) {
-                logERROR("${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.$ipSuffix:$port")
+//                logERROR("${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.$ipSuffix:$port")
                 camDev = OnvifDevice(
                     /* hostName = */ "${ipParts[0]}.${ipParts[1]}.${ipParts[2]}.$ipSuffix:$port",
                     /* username = */ authName,
@@ -165,28 +167,34 @@ class RepoOnvif : ImplRepo() {
     }
 
     override fun close() {
-        if (::jobCam1.isInitialized) jobCam1.runCatching { cancel() }
-        if (::jobCam2.isInitialized) jobCam2.runCatching { cancel() }
+        jobCam1?.runCatching { cancel() }
+        jobCam2?.runCatching { cancel() }
+        jobCam1 = null
+        jobCam2 = null
         super.close()
     }
 
 
-    fun streamLiveStart(from: String, durationMs: Int) {
+    fun streamLiveStart(id: Int, from: String, durationMs: Int) {
         streamHistoryStop(from)
-        streamClients += from to (System.currentTimeMillis() + durationMs)
+        val clients = streamClients.getOrPut(id) { mutableListOf() }
+        clients += from to (System.currentTimeMillis() + durationMs)
+        logINFO("cam $id start")
+
     }
 
-    fun streamLiveStop(from: String) {
-        streamClients.removeIf { it.first == from }
+    fun streamLiveStop(id: Int, from: String) {
+        streamClients[id]?.removeIf { it.first == from }
+        logINFO("cam $id stop")
     }
 
-    private val historyJobs = mutableMapOf<String, Job>()
 
-    fun streamHistoryStart(target: String, time: String, durationMs: Long) {
-        streamLiveStop(target)
+    fun streamHistoryStart(id: Int, target: String, time: String, durationMs: Long) {
+        streamLiveStop(1, target)
+        streamLiveStop(2, target)
         streamHistoryStop(target)
         historyJobs[target] = scopeGlobal.launch(Dispatchers.IO) {
-            val files = Repository.diskManager.getParts(time, durationMs)
+            val files = Repository.diskManager.getParts(id, time, durationMs)
             for (file in files) {
                 if (!isActive) break
                 Repository.direct.postVideoFrame(

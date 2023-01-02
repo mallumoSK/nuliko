@@ -29,7 +29,7 @@ suspend fun OnvifDevice.profile(): OnvifMediaProfile? =
         manager = OnvifManager(callback)
         manager.getMediaProfiles(this) { _, profiles: List<OnvifMediaProfile?>? ->
             manager.destroy()
-            continuation.resume( profiles?.firstOrNull())
+            continuation.resume(profiles?.firstOrNull())
         }
     }
 

@@ -1,4 +1,5 @@
 ### SETUP ENV
+
 ```shell
 
 unzip /opt/opencv/4.7.0.zip
@@ -6,7 +7,7 @@ unzip /opt/opencv/4.7.0.zip
 sudo apt install default-jdk
 sudo apt install cmake ant zip unzip ffmpeg screen
 
-sudo apt install build-essential pkg-config \
+sudo apt install  cmake ant zip unzip ffmpeg screen build-essential pkg-config \
   libjpeg-dev libtiff5-dev  libpng-dev \
   libavcodec-dev libavformat-dev libswscale-dev libv4l-dev \
   libxvidcore-dev libx264-dev \
@@ -17,18 +18,23 @@ sudo apt install build-essential pkg-config \
   libhdf5-dev libhdf5-serial-dev libhdf5-103 \
   libqt5gui5 libqt5webkit5
   
-#nano /etc/environment
+nano ./.bashrc
 JAVA_HOME=/usr/lib/jvm/default-java
-ANT_HOME=/usr/share/ant/
+ANT_HOME=/usr/share/ant
 PATH="$PATH:$JAVA_HOME/bin:$ANT_HOME/bin"
+source ./.bashrc
 
+wget https://github.com/opencv/opencv/archive/refs/tags/4.7.0.zip
+unzip opencv-4.7.0.zip
+rm  Desktop/opencv-4.7.0.zip
 
-source /etc/environment
-
-
-cd /opt/opencv/opencv-4.7.0 &&\
+cd opencv-4.7.0 &&\
   mkdir build && \
   cd build
+cd .. && \
+  rm -r build && \
+  mkdir build && \
+  cd build 
   
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
   -D BUILD_SHARED_LIBS=ON \
@@ -55,5 +61,5 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE \
   -D OPENCV_GENERATE_PKGCONFIG=OFF \
   -D BUILD_EXAMPLES=ON ..
 
-make -j4
+make -j2
 ```

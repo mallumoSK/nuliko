@@ -1,24 +1,30 @@
 package tk.mallumo.nuliko.android.ui.controller
 
-import android.os.*
-import androidx.compose.animation.*
-import androidx.compose.foundation.*
+import android.os.SystemClock
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.text.style.*
-import androidx.compose.ui.unit.*
-import kotlinx.coroutines.*
-import tk.mallumo.compose.navigation.*
-import tk.mallumo.compose.navigation.viewmodel.*
-import tk.mallumo.log.*
-import tk.mallumo.nuliko.android.common.*
-import tk.mallumo.nuliko.android.io.*
-import tk.mallumo.utils.*
-import kotlin.time.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+import tk.mallumo.compose.navigation.ComposableNavNode
+import tk.mallumo.compose.navigation.LocalNavigation
+import tk.mallumo.compose.navigation.viewmodel.NavigationViewModel
+import tk.mallumo.compose.navigation.viewmodel.viewModel
+import tk.mallumo.nuliko.android.common.GpioHW
+import tk.mallumo.nuliko.android.common.Space
+import tk.mallumo.nuliko.android.io.Repository
+import tk.mallumo.utils.second
+import kotlin.collections.forEach
+import kotlin.collections.set
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 
@@ -205,5 +211,7 @@ fun ControllerScope.CardTimer(pinId: Int, activeUntil: Long) {
             delay(1.second)
         }
         timer = 0.milliseconds.niceTimeText()
+        delay(1.second)
+        action(ControllerVM.Action.Stop(pinId))
     }
 }

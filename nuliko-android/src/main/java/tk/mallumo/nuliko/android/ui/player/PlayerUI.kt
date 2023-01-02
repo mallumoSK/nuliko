@@ -1,98 +1,28 @@
 package tk.mallumo.nuliko.android.ui.player
 
-import android.widget.ImageButton
-import androidx.compose.foundation.*
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.draw.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.layout.*
-import androidx.compose.ui.unit.*
-import compose.assets.*
-import compose.assets.svg.*
-import kotlinx.coroutines.*
-import tk.mallumo.compose.navigation.*
-import tk.mallumo.compose.navigation.viewmodel.*
-import tk.mallumo.log.*
-import tk.mallumo.nuliko.*
-import tk.mallumo.nuliko.android.io.*
-import tk.mallumo.utils.*
-
-abstract class PlayerScope {
-    abstract val vm: PlayerVM
-    abstract val action: (PlayerVM.Action) -> Unit
-
-    companion object {
-        @Composable
-        fun remember(): PlayerScope {
-            val nav = LocalNavigation.current
-            val vm = nav.viewModel<PlayerVM>()
-            val action = PlayerVM.Action.remember(vm = vm)
-            return remember {
-                object : PlayerScope() {
-                    override val vm: PlayerVM
-                        get() = vm
-                    override val action: (PlayerVM.Action) -> Unit
-                        get() = action
-
-                }
-            }
-        }
-    }
-}
-
-class PlayerVM : NavigationViewModel() {
-
-    @Composable
-    fun collectUI() = Repository.player.collect()
-
-    var rotation by mutableStateOf(360F)
-        private set
-
-    sealed interface Action {
-        object Play : Action
-        object Stop : Action
-        object Rotate : Action
-
-        companion object {
-
-
-            @Composable
-            fun remember(vm: PlayerVM): (Action) -> Unit {
-
-                return remember {
-                    { act ->
-                        when (act) {
-                            Play -> vm.play()
-                            Stop -> vm.stop()
-                            Rotate -> vm.rotate()
-                        }
-                    }
-                }
-            }
-        }
-
-    }
-
-    private fun rotate() {
-        rotation = if (rotation - 90F < 0F) 360F
-        else rotation - 90
-    }
-
-    private fun stop() {
-        Repository.player.stop()
-    }
-
-    private fun play() {
-        Repository.player.start()
-    }
-
-    override fun onRelease() {
-        Repository.player.stop()
-    }
-}
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import compose.assets.Svg
+import compose.assets.svg.PlayCircle
+import compose.assets.svg.Rotate
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import tk.mallumo.compose.navigation.ComposableNavNode
+import tk.mallumo.log.logERROR
+import tk.mallumo.nuliko.DataState
+import tk.mallumo.utils.minute
 
 @Composable
 @ComposableNavNode
@@ -106,20 +36,65 @@ fun PlayerUI() {
 
 @Composable
 fun PlayerScope.Content() {
+    Column(Modifier.fillMaxSize()) {
+        CameRaTabs()
+        PlayerStates()
+    }
+
+}
+
+@Composable
+fun PlayerScope.PlayerStates() {
     val uiState by vm.collectUI()
     when (val state = uiState) {
         is DataState.Error -> ErrorState(state.message)
-        is DataState.Idle -> IdleState()
+        is DataState.Idle -> IdleState(state.entry)
         is DataState.Loading -> LoadingState()
         is DataState.Result -> ResultState(state.nnvl)
     }
 }
 
 @Composable
-fun PlayerScope.IdleState() {
+fun PlayerScope.CameRaTabs() {
+    fun consumeAction(item: PlayerVM.CameraTab) {
+        action(PlayerVM.Action.ActivateCameraTab(item))
+    }
+    TabRow(
+        selectedTabIndex = vm.activeCamera.id - 1,
+        modifier = Modifier.fillMaxWidth(),
+        tabs = {
+            CamTab(PlayerVM.CameraTab.Cam1, ::consumeAction)
+            CamTab(PlayerVM.CameraTab.Cam2, ::consumeAction)
+        })
+}
+
+@Composable
+fun PlayerScope.CamTab(item: PlayerVM.CameraTab, onClick: (PlayerVM.CameraTab) -> Unit) {
+    Tab(
+        selected = vm.activeCamera == item,
+        onClick = { onClick(item) },
+        text = {
+            Text(item.name)
+        })
+}
+
+@Composable
+fun PlayerScope.IdleState(entry: ImageBitmap?) {
     Box(modifier = Modifier
         .fillMaxSize()
         .clickable { action(PlayerVM.Action.Play) }) {
+        if (entry != null) {
+            Image(
+                bitmap = entry,
+                contentScale = ContentScale.Fit,
+                contentDescription = "src",
+                modifier = Modifier
+                    .rotate(vm.rotation)
+                    .fillMaxSize()
+
+            )
+        }
+
         Icon(
             imageVector = Svg.PlayCircle,
             contentDescription = "PLAY",
@@ -166,14 +141,17 @@ fun PlayerScope.ResultState(nnvl: ImageBitmap) {
         )
         FloatingActionButton(
             onClick = { action(PlayerVM.Action.Rotate) },
-            modifier = Modifier.padding(start = 96.dp, top = 18.dp)
+            modifier = Modifier
+                .padding(start = 96.dp)
+                .padding(vertical = 18.dp)
+                .align(Alignment.BottomStart)
         ) {
             Icon(imageVector = Svg.Rotate, contentDescription = "Rotate")
         }
     }
 
-    LaunchedEffect(Unit ){
+    LaunchedEffect(Unit) {
         delay(15.minute)
-        if(isActive) action(PlayerVM.Action.Stop)
+        if (isActive) action(PlayerVM.Action.Stop)
     }
 }

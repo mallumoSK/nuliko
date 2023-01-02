@@ -6,9 +6,9 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.compression.*
-import tk.mallumo.utils.*
-import java.security.cert.*
-import javax.net.ssl.*
+import tk.mallumo.utils.minute
+import java.security.cert.X509Certificate
+import javax.net.ssl.X509TrustManager
 
 //val PORT = 8881 -> real_portal
 //val PORT = 8882 -> image_to_qr
@@ -16,20 +16,22 @@ import javax.net.ssl.*
 object Constants {
     private const val DEFAULT_HOST = "mallumo.tk"
 
-    private const val DEFAULT_PORT = 15_001
+    private const val DEFAULT_PORT = 15_000
 
-    object Rpi{
+    object Rpi {
         const val appId = "nRPI-RC"
-        fun connectorId(deviceId:String) = createConnectorID(appId, deviceId)
+        const val deviceIdDefault = "RPI4x2"
+        fun connectorId(deviceId: String) = createConnectorID(appId, deviceId)
     }
 
-    object Android{
+    object Android {
         const val appId = "nANDROID-RC"
+
         //        const val deviceId = "RPI4x0"
-        fun connectorId(deviceId:String) = createConnectorID(appId, deviceId)
+        fun connectorId(deviceId: String) = createConnectorID(appId, deviceId)
     }
 
-    internal fun createConnectorID( appId: String, deviceId: String) =  "${appId}_$deviceId"
+    internal fun createConnectorID(appId: String, deviceId: String) = "${appId}_$deviceId"
 
     val server = ServerConfig(
         host = DEFAULT_HOST,

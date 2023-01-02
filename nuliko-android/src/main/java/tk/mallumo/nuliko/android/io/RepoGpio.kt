@@ -1,11 +1,14 @@
 package tk.mallumo.nuliko.android.io
 
-import api.rc.*
-import api.rc.extra.*
+import api.rc.RCMessage
+import api.rc.extra.Constants
+import api.rc.genID
+import api.rc.toProtoBuff
 import io.ktor.client.request.*
-import kotlinx.coroutines.*
-import tk.mallumo.log.*
-import kotlin.time.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import tk.mallumo.log.logINFO
+import kotlin.time.Duration
 
 class RepoGpio(scope: CoroutineScope) : ImplRepo(scope) {
 
@@ -38,7 +41,7 @@ class RepoGpio(scope: CoroutineScope) : ImplRepo(scope) {
                     RCMessage(
                         id = RCMessage.genID(connectorId),
                         from = connectorId,
-                        to = Constants.Rpi.connectorId(),
+                        to = Constants.Rpi.connectorId(Constants.Rpi.deviceIdDefault),
                         content = msg
                     )
                 )

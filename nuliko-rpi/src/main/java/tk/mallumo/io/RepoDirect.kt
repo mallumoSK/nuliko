@@ -1,21 +1,19 @@
 package tk.mallumo.io
 
-import api.rc.*
-import api.rc.extra.*
-import io.ktor.client.plugins.websocket.*
+import api.rc.RCMessage
+import api.rc.extra.Constants
+import api.rc.genID
+import api.rc.toProtoBuff
 import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import tk.mallumo.isDebug
-import tk.mallumo.log.*
-import tk.mallumo.nuliko.*
+import tk.mallumo.nuliko.runConnector
 
 class RepoDirect : ImplRepo() {
 
     companion object {
         val deviceId: String by lazy {
-            if (isDebug) "RPI4x0"
+            if (!isDebug) "RPI4x2"
             else "RPI4xDEBUG"
         }
 
@@ -33,13 +31,18 @@ class RepoDirect : ImplRepo() {
     private suspend fun handleMessage(msg: RCMessage) {
         when (val content = msg.content) {
             is RCMessage.Content.StreamLiveStart -> Repository.onvif.streamLiveStart(
+                id = content.camId,
                 from = msg.from,
                 durationMs = content.durationMs
             )
 
-            is RCMessage.Content.StreamLiveStop -> Repository.onvif.streamLiveStop(msg.from)
+            is RCMessage.Content.StreamLiveStop -> Repository.onvif.streamLiveStop(
+                id = content.camId,
+                from = msg.from
+            )
 
             is RCMessage.Content.StreamHistoryStart -> Repository.onvif.streamHistoryStart(
+                id = content.camId,
                 target = msg.from,
                 time = content.time,
                 durationMs = content.durationMs
@@ -51,7 +54,7 @@ class RepoDirect : ImplRepo() {
                 postContent(
                     target = msg.from,
                     content = RCMessage.Content.StreamHistoryAnswer(
-                        items = Repository.diskManager.getHistoryStructure()
+                        items = Repository.diskManager.getHistoryStructure(content.camId)
                     )
                 )
             }
@@ -75,7 +78,7 @@ class RepoDirect : ImplRepo() {
         )
     }
 
-    private suspend fun postContent(target: String, content: RCMessage.Content) {
+    private suspend fun postContent(target: String, content: RCMessage.Content): Boolean {
         val msg = RCMessage(
             id = RCMessage.genID(Constants.Rpi.connectorId(deviceId)),
             from = Constants.Rpi.connectorId(deviceId),
@@ -83,15 +86,15 @@ class RepoDirect : ImplRepo() {
             content = content
         )
 
-        postMessageFrame(msg)
+        return postMessageFrame(msg)
     }
 
-    private suspend fun postMessageFrame(msg: RCMessage) {
+    private suspend fun postMessageFrame(msg: RCMessage): Boolean {
         val (targetApp, targetDev) = msg.to.split("_")
-        Constants.clientDirect(msg.from).use {
+        return Constants.clientDirect(msg.from).use {
             it.post(Constants.buildServerProtoMsgUrl(targetApp, targetDev)) {
                 setBody(msg.toProtoBuff())
-            }
+            }.status.value == 200
         }
     }
 }

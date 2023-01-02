@@ -1,13 +1,10 @@
 package tk.mallumo.io
 
-import api.rc.*
+import api.rc.RCMessage
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.opencv.core.Mat
-import org.opencv.core.MatOfByte
-import org.opencv.imgcodecs.Imgcodecs
 import tk.mallumo.GlobalParams
 import tk.mallumo.GlobalParams.storageConnected
 import java.io.File
@@ -31,7 +28,7 @@ class RepoDiskManager : ImplRepo() {
 
     override val scope: CoroutineScope = CoroutineScope(CoroutineName("DiskManager") + Dispatchers.IO)
 
-    fun storeImage(data: ByteArray): String {
+    fun storeImage(id: Int, data: ByteArray): String {
 
         val cal = Calendar.getInstance()
         val timeStamp = cal.fileDtName
@@ -41,22 +38,25 @@ class RepoDiskManager : ImplRepo() {
         if (cal[Calendar.HOUR_OF_DAY] in 8..18) return timeStamp
 
         scope.launch {
-            File(GlobalParams.backupDir, cal.dirDtName).apply {
-                if (!exists()) mkdirs()
-                File(this, "${timeStamp}.webp").writeBytes(data)
+            GlobalParams.getCamDirectory(id)?.also {
+                File(it, cal.dirDtName).apply {
+                    if (!exists()) mkdirs()
+                    File(this, "${timeStamp}.webp").writeBytes(data)
+                }
+                deleteOldDir(id)
             }
-            deleteOldDir()
+
         }
         return timeStamp
     }
 
-    private fun deleteOldDir() {
+    private fun deleteOldDir(id: Int) {
         val cal = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_MONTH, -GlobalParams.backupDays)
         }
         val dirDtNameMin = dirFormat.format(cal.time).toInt()
-        GlobalParams.backupDir
-            .listFiles()
+        GlobalParams.getCamDirectory(id)
+            ?.listFiles()
             ?.filter { it.isFile }
             ?.filter { (it.name.toIntOrNull() ?: dirDtNameMin) < dirDtNameMin }
             ?.onEach { dir ->
@@ -66,9 +66,9 @@ class RepoDiskManager : ImplRepo() {
             }
     }
 
-    fun getHistoryStructure(): List<RCMessage.Content.StreamHistoryAnswer.Item> {
-        return GlobalParams.backupDir
-            .listFiles()
+    fun getHistoryStructure(id: Int): List<RCMessage.Content.StreamHistoryAnswer.Item> {
+        return GlobalParams.getCamDirectory(id)
+            ?.listFiles()
             ?.filter { it.isDirectory }
             ?.mapNotNull { day ->
                 day.listFiles()
@@ -88,7 +88,7 @@ class RepoDiskManager : ImplRepo() {
             } ?: listOf()
     }
 
-    fun getParts(timeStart: String, durationMs: Long): List<File> {
+    fun getParts(id: Int, timeStart: String, durationMs: Long): List<File> {
         val start = Calendar.getInstance().apply {
             time = fileFormat.parse(timeStart)
         }
@@ -100,11 +100,13 @@ class RepoDiskManager : ImplRepo() {
         fun getFiles(startCal: Calendar, endCal: Calendar): List<File> {
             val timeRange = startCal.fileDtName.toInt()..endCal.fileDtName.toInt()
 
-            return File(GlobalParams.backupDir, startCal.dirDtName)
-                .listFiles()
-                ?.filter { it.timeStampFromName() in timeRange }
-                ?.sortedBy { it.name.toInt() }
-                ?: listOf()
+            return GlobalParams.getCamDirectory(id)?.let {
+                File(it, startCal.dirDtName)
+                    .listFiles()
+                    ?.filter { it.timeStampFromName() in timeRange }
+                    ?.sortedBy { it.name.toInt() }
+                    ?: listOf()
+            } ?: listOf()
         }
 
         return buildList {

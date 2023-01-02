@@ -10,7 +10,7 @@ import java.awt.image.DataBufferByte
 import javax.imageio.ImageIO
 
 
-fun ByteArray.toMat():Mat{
+fun ByteArray.toMat(): Mat {
     val rgb = inputStream().use {
         ImageIO.read(it)
     }
@@ -23,9 +23,14 @@ fun ByteArray.toMat():Mat{
 fun Mat.toBytesOfWebP(): ByteArray = MatOfByte().let {
     val dst = Mat()
     Imgproc.cvtColor(this, dst, Imgproc.COLOR_BGR2GRAY);
-    Imgcodecs.imencode(".webp", dst, it, MatOfInt(Imgcodecs.IMWRITE_WEBP_QUALITY, 65,Imgcodecs.IMWRITE_PAM_FORMAT_GRAYSCALE_ALPHA))
-        it.toArray().apply {
-            it.release()
-        }
+    Imgcodecs.imencode(
+        ".webp",
+        dst,
+        it,
+        MatOfInt(Imgcodecs.IMWRITE_WEBP_QUALITY, 65)
+    )
+    it.toArray().apply {
+        it.release()
+    }
 
 }
