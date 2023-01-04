@@ -40,7 +40,7 @@ tasks.create("deploy") {
     group = "application"
     val src = file("/opt/GitHub/me/nuliko/nuliko-rpi/build/libs/nuliko-rpi-$version-all.jar")
     doLast {//192.168.100.146  nuliko.local
-        exe("scp ${src.absolutePath} pi@192.168.100.146:/opt/nuliko/nuliko-rpi.jar")
+        exe("scp ${src.absolutePath} pi@nuliko.local:/opt/nuliko/nuliko-rpi.jar")
     }
 }
 

@@ -9,6 +9,7 @@ import org.opencv.core.Mat
 import org.opencv.videoio.VideoCapture
 import tk.mallumo.GlobalParams
 import tk.mallumo.ext.*
+import tk.mallumo.log.logERROR
 import tk.mallumo.log.logINFO
 import tk.mallumo.utils.second
 import java.net.NetworkInterface
@@ -136,7 +137,7 @@ class RepoOnvif : ImplRepo() {
 
     private suspend fun findOnvifProfile(authName: String, port: Int): Pair<OnvifDevice, OnvifMediaProfile> {
         var camDev: OnvifDevice?
-        val range = IntRange(250, 250) + (2..255)
+        val range = IntRange(18, 18) + (2..255)
 
         while (true) {
             var ipParts: List<String>? = null
@@ -159,9 +160,12 @@ class RepoOnvif : ImplRepo() {
                     /* username = */ authName,
                     /* password = */ GlobalParams.camAuthPass
                 )
+
                 runCatching {
-                    return camDev to camDev.profile()!!
-                }.onFailure { it.printStackTrace() }
+                    return camDev to camDev.profile()!!.apply {
+                        logINFO("CAM OK")
+                    }
+                }
             }
         }
     }

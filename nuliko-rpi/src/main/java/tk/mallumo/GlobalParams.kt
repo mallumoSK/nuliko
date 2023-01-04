@@ -16,14 +16,11 @@ object GlobalParams {
     var backupDays = 1
         private set
 
-    var storageConnected = false
-        private set
-
     private var backupDir: File? = null
 
     fun getCamDirectory(id: Int): File? = backupDir?.let {
         File(it, "cam_$id").apply {
-            if (!exists()) mkdirs()
+          kotlin.runCatching {   if (!exists()) mkdirs() }
         }
     }
 

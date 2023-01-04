@@ -6,7 +6,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import tk.mallumo.GlobalParams
-import tk.mallumo.GlobalParams.storageConnected
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,12 +33,11 @@ class RepoDiskManager : ImplRepo() {
         val timeStamp = cal.fileDtName
 
         if (GlobalParams.backupDays < 1) return timeStamp
-        if (!storageConnected) return timeStamp
         if (cal[Calendar.HOUR_OF_DAY] in 8..18) return timeStamp
 
         scope.launch {
-            GlobalParams.getCamDirectory(id)?.also {
-                File(it, cal.dirDtName).apply {
+            GlobalParams.getCamDirectory(id)?.runCatching {
+                File(this, cal.dirDtName).apply {
                     if (!exists()) mkdirs()
                     File(this, "${timeStamp}.webp").writeBytes(data)
                 }

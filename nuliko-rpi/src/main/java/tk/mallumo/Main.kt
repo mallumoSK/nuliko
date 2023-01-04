@@ -27,7 +27,7 @@ fun main(args: Array<String>) {
 
     GlobalParams.init(args)
 
-    Repository.onvif.runCam1()
+//    Repository.onvif.runCam1()
     Repository.onvif.runCam2()
     Repository.direct.run()
 
