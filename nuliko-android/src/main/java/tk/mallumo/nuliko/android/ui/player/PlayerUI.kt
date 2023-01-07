@@ -37,7 +37,7 @@ fun PlayerUI() {
 @Composable
 fun PlayerScope.Content() {
     Column(Modifier.fillMaxSize()) {
-        CameRaTabs()
+        CameraTabs()
         PlayerStates()
     }
 
@@ -55,16 +55,16 @@ fun PlayerScope.PlayerStates() {
 }
 
 @Composable
-fun PlayerScope.CameRaTabs() {
+fun PlayerScope.CameraTabs() {
     fun consumeAction(item: PlayerVM.CameraTab) {
         action(PlayerVM.Action.ActivateCameraTab(item))
     }
     TabRow(
-        selectedTabIndex = vm.activeCamera.id - 1,
+        selectedTabIndex = vm.activeCamera.index,
         modifier = Modifier.fillMaxWidth(),
         tabs = {
-            CamTab(PlayerVM.CameraTab.Cam1, ::consumeAction)
-            CamTab(PlayerVM.CameraTab.Cam2, ::consumeAction)
+            CamTab(PlayerVM.CameraTab.Brana, ::consumeAction)
+            CamTab(PlayerVM.CameraTab.Vzadu, ::consumeAction)
         })
 }
 

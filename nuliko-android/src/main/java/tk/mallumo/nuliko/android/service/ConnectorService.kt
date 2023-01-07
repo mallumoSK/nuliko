@@ -2,18 +2,22 @@ package tk.mallumo.nuliko.android.service
 
 //import api.rc.*
 
-import android.app.*
-import android.content.*
-import android.os.*
-import androidx.core.app.*
-import androidx.core.content.*
-import api.rc.*
-import api.rc.extra.*
-import kotlinx.coroutines.*
-import tk.mallumo.log.*
-import tk.mallumo.nuliko.*
-import tk.mallumo.nuliko.android.*
-import tk.mallumo.nuliko.android.io.*
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.os.IBinder
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import api.rc.RCMessage
+import api.rc.extra.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import tk.mallumo.log.logERROR
+import tk.mallumo.nuliko.android.io.Repository
+import tk.mallumo.nuliko.runConnector
 
 class ConnectorService : Service() {
 
@@ -21,8 +25,11 @@ class ConnectorService : Service() {
     private var job: Job? = null
 
     companion object {
+        var isConnected by mutableStateOf(false)
+            private set
+
         fun start(ctx: Context) {
-            ctx.startForegroundService(Intent(ctx, ConnectorService::class.java))
+            ctx.startService(Intent(ctx, ConnectorService::class.java))
         }
 
         fun stop(ctx: Context) {
@@ -33,33 +40,14 @@ class ConnectorService : Service() {
     override fun onBind(p0: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        setupNotification()
         job?.cancel()
         job = connectorScope.launch(Dispatchers.IO) {
-            runConnector(Constants.Android.appId, Repository.deviceId, ::handleMessage)
+            runConnector(Constants.Android.appId, Repository.deviceId, ::handleMessage) {
+                isConnected = it
+            }
         }
         return START_STICKY
     }
-
-    private fun setupNotification() {
-        val channel = createChannel("Nuliko")
-        val notification = NotificationCompat.Builder(this, channel.id)
-            .setContentTitle(channel.name)
-            .setContentText(channel.name)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .build()
-        startForeground(1, notification)
-    }
-
-    private fun createChannel(channel: String): NotificationChannel =
-        getSystemService<NotificationManager>()!!.let { manager ->
-            manager.getNotificationChannel(channel)
-                ?: kotlin.run {
-                    NotificationChannel(channel, channel, NotificationManager.IMPORTANCE_HIGH).also {
-                        manager.createNotificationChannel(it)
-                    }
-                }
-        }
 
     private fun handleMessage(msg: RCMessage) {
         when (val content = msg.content) {
@@ -78,6 +66,7 @@ class ConnectorService : Service() {
     }
 
     override fun onDestroy() {
+        isConnected = false
         job?.cancel()
         super.onDestroy()
     }

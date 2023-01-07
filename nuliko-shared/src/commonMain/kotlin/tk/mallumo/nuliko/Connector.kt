@@ -1,7 +1,8 @@
 package tk.mallumo.nuliko
 
 import api.rc.*
-import api.rc.extra.*
+import api.rc.extra.Constants
+import api.rc.extra.buildAuthPassword
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
@@ -11,21 +12,26 @@ import io.ktor.client.plugins.compression.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.*
-import tk.mallumo.log.*
-import tk.mallumo.utils.*
-
-
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import tk.mallumo.log.logERROR
+import tk.mallumo.log.logINFO
+import tk.mallumo.log.logWARN
+import tk.mallumo.utils.hour
+import tk.mallumo.utils.second
 
 
 suspend fun CoroutineScope.runConnector(
     appId: String,
     deviceId: String,
-    onHandleMessage: suspend (RCMessage) -> Unit
+    onHandleMessage: suspend (RCMessage) -> Unit,
+    onConnectionChange: (connected: Boolean) -> Unit = {},
 ) {
     val connectorId = Constants.createConnectorID(appId, deviceId)
 
     while (isActive) {
+        onConnectionChange(false)
         runCatching {
             val registrationMessage = Message.Registration.create(appId, deviceId)
             clientSocket(connectorId).use {
@@ -47,6 +53,7 @@ suspend fun CoroutineScope.runConnector(
                                 } catch (e: Exception) {
                                     try {
                                         logWARN(Message.fromProto(bytes))
+                                        onConnectionChange(true)
                                     } catch (e: Throwable) {
                                         e.printStackTrace()
                                     }
@@ -59,6 +66,7 @@ suspend fun CoroutineScope.runConnector(
                 }
             }
         }.onFailure {
+            onConnectionChange(false)
             logERROR("DISCONNECTED")
             it.printStackTrace()
             delay(15.second)

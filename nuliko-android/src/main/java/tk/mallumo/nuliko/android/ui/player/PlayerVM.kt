@@ -9,12 +9,12 @@ import tk.mallumo.nuliko.android.io.Repository
 
 class PlayerVM : NavigationViewModel() {
 
-    var activeCamera by mutableStateOf<CameraTab>(CameraTab.Cam1)
+    var activeCamera by mutableStateOf<CameraTab>(CameraTab.Brana)
         private set
 
-    sealed class CameraTab(val id: Int, val name: String) {
-        object Cam1 : CameraTab(1, "Cam1")
-        object Cam2 : CameraTab(2, "Cam2")
+    sealed class CameraTab(val index: Int, val id: Int, val name: String) {
+        object Brana : CameraTab(0, 2, "Brana")
+        object Vzadu : CameraTab(1, 1, "Vzadu")
     }
 
     @Composable
